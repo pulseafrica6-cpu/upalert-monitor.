@@ -57,7 +57,7 @@ async function check(u) {
 async function alerte(sujet, texte) {
   if (!process.env.RESEND_API_KEY || !process.env.ALERT_EMAIL) return;
   const r = await fetch('https://api.resend.com/emails', { method: 'POST', headers: { Authorization: `Bearer ${process.env.RESEND_API_KEY}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ from: 'UpAlert <onboarding@resend.dev>', to: [process.env.ALERT_EMAIL], subject: sujet, text: texte }) });
-  if (!r.ok) console.error('email refusé:', r.status);
+  if (!r.ok) console.error('email refusé:', r.status, await r.text());
 }
 const sites = await get('sites?select=id,url');
 for (const s of sites) {
