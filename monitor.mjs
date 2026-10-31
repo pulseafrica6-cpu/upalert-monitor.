@@ -54,7 +54,11 @@ async function check(u) {
   }
   return last;
 }
-
+async function alerte(sujet, texte) {
+  if (!process.env.RESEND_API_KEY || !process.env.ALERT_EMAIL) return;
+  const r = await fetch('https://api.resend.com/emails', { method: 'POST', headers: { Authorization: `Bearer ${process.env.RESEND_API_KEY}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ from: 'UpAlert <onboarding@resend.dev>', to: [process.env.ALERT_EMAIL], subject: sujet, text: texte }) });
+  if (!r.ok) console.error('email refusé:', r.status);
+}
 const sites = await get('sites?select=id,url');
 for (const s of sites) {
   try {
@@ -64,9 +68,9 @@ if (ok === 'private') { console.log('ignoré (adresse privée):', s.url); contin
     await send('checks', 'POST', { site_id: s.id, code_http: res.code, temps_reponse_ms: res.ms, statut: res.statut });
     await send(`sites?id=eq.${s.id}`, 'PATCH', { statut: res.statut, dernier_temps_reponse: res.ms });
     const open = await get(`incidents?site_id=eq.${s.id}&fin=is.null&select=id`);
-    if (res.statut === 'down' && open.length === 0) await send('incidents', 'POST', { site_id: s.id });
-    if (res.statut !== 'down' && open.length > 0)
-      await send(`incidents?site_id=eq.${s.id}&fin=is.null`, 'PATCH', { fin: new Date().toISOString() });
+    
+    if (res.statut === 'down' && open.length === 0) { await send('incidents', 'POST', { site_id: s.id }); await alerte('ALERTE : ' + s.url + ' est inaccessible', 'Panne détectée sur ' + s.url); }
+      if (res.statut !== 'down' && open.length > 0) { await send(`incidents?site_id=eq.${s.id}&fin=is.null`, 'PATCH', { fin: new Date().toISOString() }); await alerte('RÉTABLI : ' + s.url, s.url + ' répond de nouveau.'); }
     console.log(s.url, res.statut, res.ms);
   } catch (e) { console.error(s.url, e.message); }
 }
