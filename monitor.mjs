@@ -58,8 +58,9 @@ async function check(u) {
 const sites = await get('sites?select=id,url');
 for (const s of sites) {
   try {
-    if (!(await safe(s.url).catch(() => false))) { console.log('ignoré (URL non sûre):', s.url); continue; }
-    const res = await check(s.url);
+const ok = await safe(s.url).then(v => v ? 'ok' : 'private', () => 'dns');
+if (ok === 'private') { console.log('ignoré (adresse privée):', s.url); continue; }
+    const res = ok === 'dns' ? { statut: 'down', code: null, ms: null } : await check(s.url);
     await send('checks', 'POST', { site_id: s.id, code_http: res.code, temps_reponse_ms: res.ms, statut: res.statut });
     await send(`sites?id=eq.${s.id}`, 'PATCH', { statut: res.statut, dernier_temps_reponse: res.ms });
     const open = await get(`incidents?site_id=eq.${s.id}&fin=is.null&select=id`);
