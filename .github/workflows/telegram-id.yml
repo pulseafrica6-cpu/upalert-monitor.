@@ -1,9 +1,0 @@
-name: telegram-id
-on:
-  workflow_dispatch:
-jobs:
-  id:
-    runs-on: ubuntu-latest
-    steps:
-      - run: |
-         curl -s "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" -d chat_id="${{ secrets.TELEGRAM_CHAT_ID }}" -d text="UpAlert : test réussi ✅" | cut -c1-200
