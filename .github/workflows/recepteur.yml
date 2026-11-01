@@ -1,0 +1,14 @@
+name: recepteur
+on:
+  workflow_dispatch:
+jobs:
+  recevoir:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    env:
+      SUPABASE_URL: "${{ secrets.SUPABASE_URL }}"
+      SUPABASE_SECRET_KEY: "${{ secrets.SUPABASE_SECRET_KEY }}"
+      TELEGRAM_BOT_TOKEN: "${{ secrets.TELEGRAM_BOT_TOKEN }}"
+    steps:
+      - uses: actions/checkout@v4
+      - run: node recepteur.mjs
