@@ -54,14 +54,20 @@ async function check(u) {
   }
   return last;
 }
-async function alerte(sujet, texte) {   if (process.env.TELEGRAM_BOT_TOKEN && process.env.TELEGRAM_CHAT_ID) {
-    await fetch(`https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ chat_id: process.env.TELEGRAM_CHAT_ID, text: `${sujet}\n${texte}` }) }).catch(() => {});
-}
+async function alerte(sujet, texte, userId) {
+  let chat = process.env.TELEGRAM_CHAT_ID;
+  try {
+    const p = await get(`profils?user_id=eq.${userId}&select=telegram_chat_id`);
+    if (p[0] && p[0].telegram_chat_id) chat = p[0].telegram_chat_id;
+  } catch {}
+  if (process.env.TELEGRAM_BOT_TOKEN && chat) {
+    await fetch(`https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ chat_id: chat, text: `${sujet}\n${texte}` }) }).catch(() => {});
+  }
   if (!process.env.RESEND_API_KEY || !process.env.ALERT_EMAIL) return;
-  const r = await fetch('https://api.resend.com/emails', { method: 'POST', headers: { Authorization: `Bearer ${process.env.RESEND_API_KEY}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ from: 'UpAlert <onboarding@resend.dev>', to: [process.env.ALERT_EMAIL], subject: sujet, text: texte }) });
-  if (!r.ok) console.error('email refusé:', r.status, await r.text());
+    const r = await fetch('https://api.resend.com/emails', { method: 'POST', headers: { Authorization: `Bearer ${process.env.RESEND_API_KEY}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ from: 'UpAlert <onboarding@resend.dev>', to: [process.env.ALERT_EMAIL], subject: sujet, text: texte }) });
+  if (!r.ok) console.error('resend', r.status, await r.text());
 }
-const sites = await get('sites?select=id,url');
+const sites = await get('sites?select=id,url,user_id');
 for (const s of sites) {
   try {
 const ok = await safe(s.url).then(v => v ? 'ok' : 'private', () => 'dns');
@@ -71,8 +77,8 @@ if (ok === 'private') { console.log('ignoré (adresse privée):', s.url); contin
     await send(`sites?id=eq.${s.id}`, 'PATCH', { statut: res.statut, dernier_temps_reponse: res.ms });
     const open = await get(`incidents?site_id=eq.${s.id}&fin=is.null&select=id`);
     
-    if (res.statut === 'down' && open.length === 0) { await send('incidents', 'POST', { site_id: s.id }); await alerte('ALERTE : ' + s.url + ' est inaccessible', 'Panne détectée sur ' + s.url); }
-      if (res.statut !== 'down' && open.length > 0) { await send(`incidents?site_id=eq.${s.id}&fin=is.null`, 'PATCH', { fin: new Date().toISOString() }); await alerte('RÉTABLI : ' + s.url, s.url + ' répond de nouveau.'); }
+    if (res.statut === 'down' && open.length === 0) { await send('incidents', 'POST', { site_id: s.id }); await alerte('ALERTE : ' + s.url + ' est inaccessible', 'Panne détectée sur ' + s.url, s.user_id); }
+      if (res.statut !== 'down' && open.length > 0) { await send(`incidents?site_id=eq.${s.id}&fin=is.null`, 'PATCH', { fin: new Date().toISOString() }); await alerte('RÉTABLI : ' + s.url, s.url + ' répond de nouveau.', s.user_id); }
     console.log(s.url, res.statut, res.ms);
   } catch (e) { console.error(s.url, e.message); }
 }
