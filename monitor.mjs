@@ -54,7 +54,9 @@ async function check(u) {
   }
   return last;
 }
-async function alerte(sujet, texte) {
+async function alerte(sujet, texte) {   if (process.env.TELEGRAM_BOT_TOKEN && process.env.TELEGRAM_CHAT_ID) {
+    await fetch(`https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ chat_id: process.env.TELEGRAM_CHAT_ID, text: `${sujet}\n${texte}` }) }).catch(() => {});
+}
   if (!process.env.RESEND_API_KEY || !process.env.ALERT_EMAIL) return;
   const r = await fetch('https://api.resend.com/emails', { method: 'POST', headers: { Authorization: `Bearer ${process.env.RESEND_API_KEY}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ from: 'UpAlert <onboarding@resend.dev>', to: [process.env.ALERT_EMAIL], subject: sujet, text: texte }) });
   if (!r.ok) console.error('email refusé:', r.status, await r.text());
