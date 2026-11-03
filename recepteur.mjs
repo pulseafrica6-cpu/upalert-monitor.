@@ -8,7 +8,6 @@ async function tg(m, body) {
   return r.json();
 }
 
-const prof = await fetch(`${BASE}/rest/v1/profils?select=value:telegram_code&limit=0`, { headers: WH }).catch(() => null);
 
 let offset = 0;
 const upd = await tg('getUpdates', { timeout: 0, allowed_updates: ['message'] });
